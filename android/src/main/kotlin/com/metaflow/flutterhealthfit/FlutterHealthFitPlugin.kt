@@ -43,6 +43,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
 
     companion object {
         private const val GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1
+        private const val GOOGLE_SIGN_IN_REQUEST_CODE = 2
         private const val SENSOR_PERMISSION_REQUEST_CODE = 9174802
 
         val stepsDataType: DataType = DataType.TYPE_STEP_COUNT_DELTA
@@ -381,7 +382,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
     }
 
     private fun isAuthorized(fitnessOptions: FitnessOptions): Boolean {
-        val account = activity?.let { GoogleSignIn.getAccountForExtension(it, fitnessOptions) }
+        val account = activity?.let { GoogleSignIn.getLastSignedInAccount(it) }
         return GoogleSignIn.hasPermissions(account, fitnessOptions)
     }
 
@@ -414,6 +415,9 @@ class FlutterHealthFitPlugin : MethodCallHandler,
                     deferredResult?.error("canceled", "User cancelled or app not authorized", null)
 
                 deferredResult = null
+                true
+            }
+            GOOGLE_SIGN_IN_REQUEST_CODE -> {
                 true
             }
             else -> false
@@ -456,7 +460,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
 
     private fun isAuthorized(useSensitive: Boolean): Boolean {
         val fitnessOptions = getFitnessOptions(useSensitive)
-        val account = activity?.let { GoogleSignIn.getAccountForExtension(it, fitnessOptions) }
+        val account = activity?.let { GoogleSignIn.getLastSignedInAccount(it) }
         sendNativeLog("isAuthorized: Google account = ${account?.email?: account}")
         val hasPermissions = GoogleSignIn.hasPermissions(account, fitnessOptions)
         sendNativeLog("isAuthorized result: hasPermissions = $hasPermissions")
@@ -466,6 +470,15 @@ class FlutterHealthFitPlugin : MethodCallHandler,
     private fun sendNativeLog(message: String) {
         activity?.runOnUiThread {
             logger?.success(message)
+        }
+    }
+
+    private fun attemptSignIn(callback: (Boolean) -> Unit) {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail()
+                .build()
+        activity?.let { activity ->
+            activity.startActivityForResult(GoogleSignIn.getClient(activity, gso).signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE)
         }
     }
 
@@ -480,12 +493,15 @@ class FlutterHealthFitPlugin : MethodCallHandler,
                 sendNativeLog("Calling for google client sign out")
                 client.signOut().addOnCompleteListener {
                     sendNativeLog("Signed out, requesting permissions again")
-                    GoogleSignIn.requestPermissions(
-                            activity,
-                            GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
-                            GoogleSignIn.getAccountForExtension(activity, fitnessOptions),
-                            fitnessOptions
-                    )
+                    attemptSignIn {
+                        GoogleSignIn.requestPermissions(
+                                activity,
+                                GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
+                                GoogleSignIn.getLastSignedInAccount(activity),
+                                fitnessOptions
+                        )
+                    }
+
                 }
             }
         } else {
@@ -499,7 +515,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
         activity?.let { activity ->
             Fitness.getRecordingClient(
                     activity,
-                    GoogleSignIn.getAccountForExtension(activity, fitnessOptions)
+                    GoogleSignIn.getLastSignedInAccount(activity)
             )
                     .subscribe(type)
                     .addOnSuccessListener {
@@ -523,7 +539,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
                 FitnessOptions.builder().addDataType(stepsDataType).addDataType(aggregatedDataType)
                         .build()
         val activity = activity ?: return
-        val gsa = GoogleSignIn.getAccountForExtension(activity, fitnessOptions)
+        val gsa = GoogleSignIn.getLastSignedInAccount(activity)
 
         val ds = DataSource.Builder()
                 .setAppPackageName("com.google.android.gms")
@@ -585,7 +601,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
         val fitnessOptions = FitnessOptions.builder().addDataType(sleepDataType).build()
 
         val activity = activity ?: return
-        val gsa = GoogleSignIn.getAccountForExtension(activity, fitnessOptions)
+        val gsa = GoogleSignIn.getLastSignedInAccount(activity)
 
         val SLEEP_STAGE_NAMES = arrayOf(
                 "Unused",
@@ -674,7 +690,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
         val fitnessOptions = FitnessOptions.builder().addDataType(heartRateDataType).build()
 
         val activity = activity ?: return
-        val gsa = GoogleSignIn.getAccountForExtension(activity, fitnessOptions)
+        val gsa = GoogleSignIn.getLastSignedInAccount(activity)
 
         val request = DataReadRequest.Builder()
                 .setTimeRange(start, end, TimeUnit.MILLISECONDS)
@@ -729,7 +745,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
         val fitnessOptions = FitnessOptions.builder().addDataType(bodyFatDataType).build()
 
         val activity = activity ?: return
-        val gsa = GoogleSignIn.getAccountForExtension(activity, fitnessOptions)
+        val gsa = GoogleSignIn.getLastSignedInAccount(activity)
 
         val request = DataReadRequest.Builder().read(DataType.TYPE_BODY_FAT_PERCENTAGE)
                 .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
@@ -775,7 +791,7 @@ class FlutterHealthFitPlugin : MethodCallHandler,
         val fitnessOptions = FitnessOptions.builder().addDataType(weightDataType).build()
 
         val activity = activity ?: return
-        val gsa = GoogleSignIn.getAccountForExtension(activity, fitnessOptions)
+        val gsa = GoogleSignIn.getLastSignedInAccount(activity)
 
         val request = DataReadRequest.Builder().read(DataType.TYPE_WEIGHT)
                 .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
