@@ -555,12 +555,17 @@ class HealthkitReader: NSObject {
         let startDate = Date(timeIntervalSince1970: start)
         let endDate = Date(timeIntervalSince1970: end)
         let sampleType = stepsQuantityType
+
+
         let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
-        
+        let predicateWithoutManualEntries  = NSPredicate(format: "metadata.%K != YES", HKMetadataKeyWasUserEntered)
+
+        let compoundPredicate = NSCompoundPredicate(type: .and, subpredicates: [predicate, predicateWithoutManualEntries])
+
         let query = HKStatisticsQuery(quantityType: sampleType,
-                                      quantitySamplePredicate: predicate,
+                                      quantitySamplePredicate: compoundPredicate,
                                       options: .cumulativeSum) { query, queryResult, error in
-            
+
             guard let queryResult = queryResult else {
                 let error = error! as NSError
                 print("[getTotalStepsInInterval] got error: \(error)")
