@@ -547,20 +547,24 @@ class FlutterHealthFitPlugin : MethodCallHandler,
 
                 val map = HashMap<Long, Int>() // need to return to Dart so can't use sparse array
                 for (bucket in readDataResult.buckets) {
-                    val dp = bucket.dataSets.firstOrNull()?.dataPoints?.firstOrNull()
-                    if (dp != null) {
-                        val count = dp.getValue(aggregatedDataType.fields[0])
-                        if ("user_input" != dp.originalDataSource.streamName) {
-                            val startTime = dp.getStartTime(TimeUnit.MILLISECONDS)
-                            val startDate = Date(startTime)
-                            val endDate = Date(dp.getEndTime(TimeUnit.MILLISECONDS))
-                            sendNativeLog("$TAG | returning $count steps for $startDate - $endDate")
-                            map[startTime] = count.asInt()
+                    val dps = bucket.dataSets.firstOrNull()
+                    if (dps?.dataPoints != null) {
+                        for (dp in dps.dataPoints) {
+                            if (dp != null) {
+                                val count = dp.getValue(aggregatedDataType.fields[0])
+                                if ("user_input" != dp.originalDataSource.streamName) {
+                                    val startTime = dp.getStartTime(TimeUnit.MILLISECONDS)
+                                    val startDate = Date(startTime)
+                                    val endDate = Date(dp.getEndTime(TimeUnit.MILLISECONDS))
+                                    sendNativeLog("$TAG | returning $count steps for $startDate - $endDate")
+                                    map[startTime] = count.asInt()
+                                }
+                            } else {
+                                val startDay = Date(start)
+                                val endDay = Date(end)
+                                sendNativeLog("$TAG | no steps for $startDay - $endDay")
+                            }
                         }
-                    } else {
-                        val startDay = Date(start)
-                        val endDay = Date(end)
-                        sendNativeLog("$TAG | no steps for $startDay - $endDay")
                     }
                 }
                 activity.runOnUiThread {
