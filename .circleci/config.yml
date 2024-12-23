@@ -1,0 +1,31 @@
+version: 2.1
+orbs:
+  flutter: circleci/flutter@1.0.0
+
+jobs:
+  build_and_analyze:
+    docker:
+      - image: circleci/android:2022.04.1
+    steps:
+      - checkout
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y curl git unzip xz-utils libglu-dev
+      - run:
+          name: Install Flutter
+          command: |
+            git clone https://github.com/flutter/flutter.git ~/flutter
+            echo 'export PATH="$PATH:$HOME/flutter/bin"' >> $BASH_ENV
+      - run:
+          name: Flutter Initial Setup
+          command: flutter doctor
+      - run:
+          name: Get Dependencies
+          command: flutter pub get
+      - run:
+          name: Analyze Code
+          command: flutter analyze
+
+workflows:
+  main_workflow:
+    jobs:
+      - build_and_analyze
