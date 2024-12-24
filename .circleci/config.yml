@@ -1,31 +1,29 @@
 version: 2.1
+
 orbs:
-  flutter: circleci/flutter@1.0.0
+  flutter: circleci/flutter@2.0.4
+  macos: circleci/macos@2.5.2
 
 jobs:
-  build_and_analyze:
-    docker:
-      - image: circleci/android:2022.04.1
+  build_and_test:
+    macos:
+      xcode: 15.3.0
     steps:
       - checkout
-      - run: sudo apt-get update
-      - run: sudo apt-get install -y curl git unzip xz-utils libglu-dev
+      - flutter/install_sdk_and_pub:
+          version: 3.19.6
       - run:
-          name: Install Flutter
-          command: |
-            git clone https://github.com/flutter/flutter.git ~/flutter
-            echo 'export PATH="$PATH:$HOME/flutter/bin"' >> $BASH_ENV
-      - run:
-          name: Flutter Initial Setup
-          command: flutter doctor
-      - run:
-          name: Get Dependencies
+          name: Install Dependencies
           command: flutter pub get
       - run:
-          name: Analyze Code
-          command: flutter analyze
+          name: Run Tests
+          command: flutter test
+      - run:
+          name: Build iOS
+          command: flutter build ios --no-codesign
 
 workflows:
-  main_workflow:
+  version: 2
+  build_and_test:
     jobs:
-      - build_and_analyze
+      - build_and_test
