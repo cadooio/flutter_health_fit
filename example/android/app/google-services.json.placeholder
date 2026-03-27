@@ -1,5 +1,0 @@
-Download google-services.json from Firebase Console:
-1. Go to Firebase Console > Project Settings
-2. Select the Android app (com.metaflow.flutterhealthfitexample)
-3. Download google-services.json
-4. Place it in this directory as google-services.json
