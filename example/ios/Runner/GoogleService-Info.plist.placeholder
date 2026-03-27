@@ -1,0 +1,6 @@
+Download GoogleService-Info.plist from Firebase Console:
+1. Go to Firebase Console > Project Settings
+2. Select the iOS app (io.cadoo.cadoo or com.metaflow.flutterHealthFitt)
+3. Download GoogleService-Info.plist
+4. Place it in this directory as GoogleService-Info.plist
+5. Add it to the Runner target in Xcode
